@@ -4,6 +4,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+#define range 20
 #define SCREEN_WIDTH 128    // OLED display width, in pixels
 #define SCREEN_HEIGHT 32    // OLED display height, in pixels
 #define OLED_RESET -1       // Reset pin # (or -1 if sharing Arduino reset pin)
@@ -92,9 +93,11 @@ void loop()
 {
   display.setTextSize(2);
   display.setCursor(0, 0);
+
   int dis1 = ultra_sonic_1.GetDistance();
   int dis2 = ultra_sonic_2.GetDistance();
   char park_lot_1[] = {dis1, dis2};
+  
   int light = map(analogRead(A0), 0, 1024, 100, 0);
   Serial.print("distance 1 = " + String(dis1) + " / distance 2 = " + String(dis2));
   switch (state)
@@ -103,7 +106,7 @@ void loop()
     if (light <= 25)
     {
       RGB(0, 0, 0);
-      if (dis1 <= 15 || dis2 <= 15)
+      if (dis1 <= range || dis2 <= range)
       {
         state = detected;
       }
@@ -115,7 +118,7 @@ void loop()
         RGB(1, 1, 1);
         last_time = millis(); // time stamp
       }
-      if (dis1 <= 15 || dis2 <= 15)
+      if (dis1 <= range || dis2 <= range)
       {
         state = detected;
       }
@@ -126,7 +129,7 @@ void loop()
     state = check;
     break;
   case check:
-    if (dis1 <= 15 || dis2 <= 15)
+    if (dis1 <= range || dis2 <= range)
     {
       state = detected;
       display.print("Parked not properly");
