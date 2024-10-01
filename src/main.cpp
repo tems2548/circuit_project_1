@@ -3,16 +3,25 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "PCF8574.h"
 
-#define range 20
+#define range 15        //range to detected
 #define SCREEN_WIDTH 128    // OLED display width, in pixels
 #define SCREEN_HEIGHT 32    // OLED display height, in pixels
 #define OLED_RESET -1       // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+PCF8574 pcf8574(0x20);
 
 unsigned long period = 5000; // wait time
 unsigned long last_time = 0; // time stamp
+int light;
+
+class task{
+public:
+uint8_t red_pcf;
+uint8_t green_pcf;
+uint8_t blue_pcf;
 
 enum states
 {
@@ -21,7 +30,79 @@ enum states
   reset,
   check
 };
+
 states state;
+ void RGBpcf_begin(uint8_t pin1,uint8_t pin2,uint8_t pin3);
+ void RGB_pcf(byte R, byte G, byte B);
+ void work(int dis1_value,int dis2_value);
+};
+void task::RGBpcf_begin(uint8_t pin1,uint8_t pin2,uint8_t pin3){
+  pcf8574.pinMode(pin1,OUTPUT);
+  pcf8574.pinMode(pin2,OUTPUT);
+  pcf8574.pinMode(pin3,OUTPUT);
+   
+  red_pcf = pin1;
+  green_pcf = pin2;
+  blue_pcf = pin3;
+
+  state = idle;
+}
+void task::RGB_pcf(byte R, byte G, byte B)
+{
+  // Common Anode
+  pcf8574.digitalWrite(red_pcf, R);
+  pcf8574.digitalWrite(green_pcf, G);
+  pcf8574.digitalWrite(blue_pcf, B);
+}
+void task::work(int dis1_value,int dis2_value){
+  switch (state)
+  {
+  case idle:
+    if (light <= 25)
+    {
+      RGB_pcf(0, 0, 0);
+      if (dis1_value <= range || dis2_value <= range)
+      {
+        state = detected;
+      }
+    }
+    else
+    {
+      if (millis() - last_time > period)
+      {
+        RGB_pcf(1, 1, 1);
+        last_time = millis(); // time stamp
+      }
+      if (dis1_value <= range || dis2_value <= range)
+      {
+        state = detected;
+      }
+    }
+    break;
+  case detected:
+    RGB_pcf(1, 1, 0);
+    state = check;
+    break;
+  case check:
+    if (dis1_value <= range || dis2_value <= range)
+    {
+      state = detected;
+      display.print("Parked not properly");
+    }
+    else
+    {
+      RGB_pcf(0, 1, 1);
+      state = reset;
+    }
+    break;
+  case reset:
+    last_time = millis();
+    state = idle;
+    display.clearDisplay();
+    break;
+  }
+}
+
 class Sensors
 {
 public:
@@ -62,90 +143,52 @@ int Sensors::GetDistance(void)
 
 Sensors ultra_sonic_1;
 Sensors ultra_sonic_2;
+Sensors ultra_sonic_3;
+Sensors ultra_sonic_4;
 
-void RGB(byte R, byte G, byte B)
-{
-  // Common Anode
-  digitalWrite(A1, R);
-  digitalWrite(A2, G);
-  digitalWrite(A3, B);
-}
+task park1;
+task park2;
+
 
 void setup()
 {
   Serial.begin(9600); // Starts the serial communication
-  pinMode(A1, OUTPUT);
-  pinMode(A2, OUTPUT);
-  pinMode(A3, OUTPUT);
   ultra_sonic_1.begin(10, 9);
-  ultra_sonic_2.begin(12, 13);
+  ultra_sonic_2.begin(12, 11);
+  ultra_sonic_3.begin(6, 7);
+  ultra_sonic_4.begin(4, 5);
+  
+  pcf8574.begin();
   display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
+
+  	// Set pinMode to OUTPUT
+  park1.RGBpcf_begin(P0,P1,P2);
+  park2.RGBpcf_begin(P3,P4,P5);
   display.display();
   delay(200); // Pause for 2 seconds
 
   // Clear the buffer
   display.clearDisplay();
   display.setTextColor(WHITE);
-  state = idle;
-  RGB(1, 1, 1);
 }
 void loop()
 {
   display.setTextSize(2);
   display.setCursor(0, 0);
 
+  //!parking lot 1
   int dis1 = ultra_sonic_1.GetDistance();
   int dis2 = ultra_sonic_2.GetDistance();
-  char park_lot_1[] = {dis1, dis2};
+  park1.work(dis1,dis2);
+
+  //!parking lot 2
+  int dis3 = ultra_sonic_3.GetDistance();
+  int dis4 = ultra_sonic_4.GetDistance();
+  park2.work(dis3,dis4);
+
+  light = map(analogRead(A0), 0, 1024, 100, 0);
+  Serial.print("distance 3 = " + String(dis3) + " / distance 4 = " + String(dis4));
   
-  int light = map(analogRead(A0), 0, 1024, 100, 0);
-  Serial.print("distance 1 = " + String(dis1) + " / distance 2 = " + String(dis2));
-  switch (state)
-  {
-  case idle:
-    if (light <= 25)
-    {
-      RGB(0, 0, 0);
-      if (dis1 <= range || dis2 <= range)
-      {
-        state = detected;
-      }
-    }
-    else
-    {
-      if (millis() - last_time > period)
-      {
-        RGB(1, 1, 1);
-        last_time = millis(); // time stamp
-      }
-      if (dis1 <= range || dis2 <= range)
-      {
-        state = detected;
-      }
-    }
-    break;
-  case detected:
-    RGB(1, 1, 0);
-    state = check;
-    break;
-  case check:
-    if (dis1 <= range || dis2 <= range)
-    {
-      state = detected;
-      display.print("Parked not properly");
-    }
-    else
-    {
-      RGB(0, 1, 1);
-      state = reset;
-    }
-    break;
-  case reset:
-    last_time = millis();
-    state = idle;
-    display.clearDisplay();
-    break;
-  }
   delay(40);
   Serial.println("");
   display.display();

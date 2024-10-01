@@ -88,6 +88,7 @@
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "files.associations": {
     "memory": "cpp",
-    "istream": "cpp"
+    "istream": "cpp",
+    "optional": "cpp"
   }
 }
