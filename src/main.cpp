@@ -113,7 +113,6 @@ public:
   int echoPin;
 
   void begin(int echo, int trigger);
-
   int GetDistance(void);
 };
 void Sensors::begin(int echo, int trigger)
@@ -161,9 +160,10 @@ void setup()
   pcf8574.begin();
   display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
 
-  	// Set pinMode to OUTPUT
+  // Set RGB pin
   park1.RGBpcf_begin(P0,P1,P2);
   park2.RGBpcf_begin(P3,P4,P5);
+
   display.display();
   delay(200); // Pause for 2 seconds
 
