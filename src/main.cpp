@@ -5,7 +5,33 @@
 #include <Adafruit_SSD1306.h>
 #include "PCF8574.h"
 
-#define range 16        //range to detected
+//////////////////////////////////////////////////////////////////////
+// Blynk section
+
+#define BLYNK_PRINT Serial
+#define BLYNK_TEMPLATE_ID "TMPL6riiL3wNF"
+#define BLYNK_TEMPLATE_NAME "Circuit project"
+#define BLYNK_AUTH_TOKEN "G6uqwe5qDkQvJYSg9eQT1-obdxHjUB6A"
+
+#include <WiFiS3.h>
+#include <BlynkSimpleWifi.h>
+
+char ssid[] = "TemZ"; 
+char pass[] = "0960698678"; 
+int parking(int val){
+   if(val < 12){
+    return 1;
+   }else{
+    return 0;
+   }
+}
+void Blynk_send_data(int data1,int data2){
+  Blynk.virtualWrite(V0,parking(data1));
+  Blynk.virtualWrite(V1,parking(data2));
+}
+//////////////////////////////////////////////////////////////////////
+
+#define range 15        //range to detected
 #define read_light_pin A0
 #define SCREEN_WIDTH 128    // OLED display width, in pixels
 #define SCREEN_HEIGHT 32    // OLED display height, in pixels
@@ -13,6 +39,8 @@
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 PCF8574 pcf8574(0x20);
+
+
 
 class task{
 public:
@@ -153,6 +181,7 @@ task park2;
 
 void setup()
 {
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
   Serial.begin(9600); // Starts the serial communication
   ultra_sonic_1.begin(10, 9);
   ultra_sonic_2.begin(12, 11);
@@ -191,15 +220,20 @@ void loop()
   int dis3 = ultra_sonic_3.GetDistance();
   int dis4 = ultra_sonic_4.GetDistance();
   int detect_park2 = upper_US_2.GetDistance();
+
   park2.work(dis3,dis4,LIGHT);
   park1.work(dis1,dis2,LIGHT);
   
-  //Serial.print("distance up 1 = " + String(detect_park1) + " / distance up 2 = " + String(detect_park2));
+  Serial.print("distance up 1 = " + String(detect_park1) + " / distance up 2 = " + String(detect_park2));
   //Serial.print("light = " + String(LIGHT));
-  Serial.print("distance  1 = " + String(dis1) + " / distance  2 = " + String(dis2));
+  //Serial.print("distance  1 = " + String(dis1) + " / distance  2 = " + String(dis2));
   Serial.println("");
-  Serial.print("distance  3 = " + String(dis3) + " / distance  4 = " + String(dis4));
+  //Serial.print("distance  3 = " + String(dis3) + " / distance  4 = " + String(dis4));
   delay(50);
   Serial.println("");
+  
+  Blynk_send_data(detect_park1,detect_park2);
+  Blynk.run();
   display.display();
 }
+
