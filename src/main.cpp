@@ -5,7 +5,7 @@
 #include <Adafruit_SSD1306.h>
 #include "PCF8574.h"
 
-#define range 15        //range to detected
+#define range 16        //range to detected
 #define read_light_pin A0
 #define SCREEN_WIDTH 128    // OLED display width, in pixels
 #define SCREEN_HEIGHT 32    // OLED display height, in pixels
@@ -14,15 +14,14 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 PCF8574 pcf8574(0x20);
 
-unsigned long period = 5000; // wait time
-unsigned long last_time = 0; // time stamp
-int light;
-
 class task{
 public:
 uint8_t red_pcf;
 uint8_t green_pcf;
 uint8_t blue_pcf;
+
+unsigned long period = 5000; // wait time
+unsigned long last_time = 0; // time stamp
 
 enum states
 {
@@ -168,12 +167,12 @@ void setup()
   display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
 
   // Set RGB pin
-  park1.RGBpcf_begin(P0,P1,P2);
-  park2.RGBpcf_begin(P3,P4,P5);
+  park1.RGBpcf_begin(P3,P4,P5);
+  park2.RGBpcf_begin(P0,P1,P2);
 
   display.display();
   delay(200); // Pause for 2 seconds
-
+  display.setRotation(2);
   // Clear the buffer
   display.clearDisplay();
   display.setTextColor(WHITE);
@@ -182,22 +181,25 @@ void loop()
 {
   display.setTextSize(2);
   display.setCursor(0, 0);
-  int LIGHT = map(analogRead(read_light_pin),0, 1023, 100, 0);
+  int LIGHT = map(analogRead(read_light_pin),0, 1023, 0, 100);
   //!parking lot 1
   int dis1 = ultra_sonic_1.GetDistance();
   int dis2 = ultra_sonic_2.GetDistance();
   int detect_park1 = upper_US_1.GetDistance();
-  park1.work(dis1,dis2,LIGHT);
 
   //!parking lot 2
   int dis3 = ultra_sonic_3.GetDistance();
   int dis4 = ultra_sonic_4.GetDistance();
   int detect_park2 = upper_US_2.GetDistance();
   park2.work(dis3,dis4,LIGHT);
+  park1.work(dis1,dis2,LIGHT);
   
-  //Serial.print("distance up 1 = " + String(detect_park1) + " / distance up 2 = " + String(detect_park1));
-  Serial.print("light = " + String(LIGHT));
-  delay(40);
+  //Serial.print("distance up 1 = " + String(detect_park1) + " / distance up 2 = " + String(detect_park2));
+  //Serial.print("light = " + String(LIGHT));
+  Serial.print("distance  1 = " + String(dis1) + " / distance  2 = " + String(dis2));
+  Serial.println("");
+  Serial.print("distance  3 = " + String(dis3) + " / distance  4 = " + String(dis4));
+  delay(50);
   Serial.println("");
   display.display();
 }
