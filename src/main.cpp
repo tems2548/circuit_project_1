@@ -18,6 +18,7 @@
 
 char ssid[] = "TemZ"; 
 char pass[] = "0960698678"; 
+
 int parking(int val){
    if(val < 12){
     return 1;
@@ -25,6 +26,7 @@ int parking(int val){
     return 0;
    }
 }
+
 void Blynk_send_data(int data1,int data2){
   Blynk.virtualWrite(V0,parking(data1));
   Blynk.virtualWrite(V1,parking(data2));
@@ -39,7 +41,6 @@ void Blynk_send_data(int data1,int data2){
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 PCF8574 pcf8574(0x20);
-
 
 
 class task{
@@ -115,7 +116,6 @@ void task::work(int dis1_value,int dis2_value,int light_val){
     if (dis1_value <= range || dis2_value <= range)
     {
       state = detected;
-      display.print("Parked not properly");
     }
     else
     {
@@ -126,7 +126,6 @@ void task::work(int dis1_value,int dis2_value,int light_val){
   case reset:
     last_time = millis();
     state = idle;
-    display.clearDisplay();
     break;
   }
 }
@@ -208,9 +207,11 @@ void setup()
 }
 void loop()
 {
+  display.clearDisplay();
   display.setTextSize(2);
   display.setCursor(0, 0);
   int LIGHT = map(analogRead(read_light_pin),0, 1023, 0, 100);
+
   //!parking lot 1
   int dis1 = ultra_sonic_1.GetDistance();
   int dis2 = ultra_sonic_2.GetDistance();
@@ -231,7 +232,47 @@ void loop()
   //Serial.print("distance  3 = " + String(dis3) + " / distance  4 = " + String(dis4));
   delay(50);
   Serial.println("");
+  display.setTextSize(2);
+   display.setCursor(40,5);
+   display.print("X");
+   display.setCursor(100,5);
+   display.print("X");
+  if(!parking(detect_park1) && !parking(detect_park2)){
+   display.setCursor(5,0);
+   display.print("|");
+   display.setCursor(5,15);
+   display.print("V");
+
+   display.setCursor(70,0);
+   display.print("|");
+   display.setCursor(70,15);
+   display.print("V");
+
+  }else if(!parking(detect_park1)){
+   display.setCursor(0,5);
+   display.print("--");
+
+   display.setCursor(70,0);
+   display.print("|");
+   display.setCursor(70,15);
+   display.print("V");
+
+  }else if(!parking(detect_park2)){
+   display.setCursor(65,5);
+   display.print("--");
+   
+   display.setCursor(5,0);
+   display.print("|");
+   display.setCursor(5,15);
+   display.print("V");
+  }else{
+   display.setCursor(0,5);
+   display.print("--");
+   display.setCursor(65,5);
+   display.print("--");
+  }
   
+
   Blynk_send_data(detect_park1,detect_park2);
   Blynk.run();
   display.display();
